@@ -1,0 +1,5 @@
+{
+  "name": "Gemini Smart TTS & SRT Generator",
+  "description": "A high-precision Text-to-Speech tool that utilizes Gemini for intelligent subtitle segmentation and the Web Speech API to generate accurate SRT subtitle files with timing.",
+  "requestFramePermissions": []
+}
