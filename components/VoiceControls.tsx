@@ -36,9 +36,25 @@ const VoiceControls: React.FC<VoiceControlsProps> = ({
       
       // Set default if none selected
       if (!selectedVoice && sortedVoices.length > 0) {
-        // Prefer English US Microsoft voice if available
-        const defaultVoice = sortedVoices.find(v => v.name.includes("Microsoft Guy") || v.name.includes("English (United States)")) || sortedVoices[0];
-        onVoiceChange(defaultVoice);
+        // Priority 1: Microsoft Ava Online (Natural) - English (United States)
+        let defaultVoice = sortedVoices.find(v => 
+          v.name.includes("Microsoft Ava") && 
+          v.name.includes("Natural") && 
+          v.name.includes("English (United States)")
+        );
+
+        // Priority 2: Any English (United States) voice
+        if (!defaultVoice) {
+          defaultVoice = sortedVoices.find(v => v.name.includes("English (United States)"));
+        }
+
+        // Priority 3: Any English voice
+        if (!defaultVoice) {
+            defaultVoice = sortedVoices.find(v => v.lang.startsWith("en"));
+        }
+
+        // Fallback: First available
+        onVoiceChange(defaultVoice || sortedVoices[0]);
       }
     };
 
