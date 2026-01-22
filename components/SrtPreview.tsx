@@ -43,9 +43,11 @@ const SrtPreview: React.FC<SrtPreviewProps> = ({ chunks, activeChunkId, status, 
   const isRecording = status === AppStatus.PLAYING;
 
   return (
-    <div className="flex flex-col h-[650px] bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden relative group">
+    // Height uses calculation to fit remaining space on screen (Viewport Height - Header approx 140px)
+    // Min-height ensures it doesn't collapse on very small screens
+    <div className="flex flex-col h-[600px] lg:h-[calc(100vh-140px)] min-h-[500px] bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden relative group">
       {/* Top Status Bar */}
-      <div className="px-5 py-4 border-b border-white/5 flex justify-between items-center bg-gray-950/50 relative z-20">
+      <div className="px-5 py-4 border-b border-white/5 flex justify-between items-center bg-gray-950/50 relative z-20 shrink-0">
         <div className="flex items-center gap-3">
           <div className={clsx("p-1.5 rounded-lg border", isRecording ? "bg-red-500/10 border-red-500/20" : "bg-gray-800/50 border-white/5")}>
              <Monitor className={clsx("transition-colors duration-500", isRecording ? "text-red-500" : "text-gray-400")} size={16} />
@@ -78,7 +80,7 @@ const SrtPreview: React.FC<SrtPreviewProps> = ({ chunks, activeChunkId, status, 
 
       {/* Progress Bar (Visible only when chunks exist) */}
       {chunks.length > 0 && (
-        <div className="h-1 w-full bg-gray-800">
+        <div className="h-1 w-full bg-gray-800 shrink-0">
            <div 
              className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 transition-all duration-300"
              style={{ width: `${activeChunkId !== null ? ((activeChunkId + 1) / chunks.length) * 100 : 0}%` }}
@@ -157,7 +159,7 @@ const SrtPreview: React.FC<SrtPreviewProps> = ({ chunks, activeChunkId, status, 
       </div>
       
       {/* Footer Status */}
-      <div className="px-4 py-3 bg-gray-950 border-t border-white/5 text-center flex justify-between items-center text-[10px] font-mono text-gray-500 uppercase tracking-wider">
+      <div className="px-4 py-3 bg-gray-950 border-t border-white/5 text-center flex justify-between items-center text-[10px] font-mono text-gray-500 uppercase tracking-wider shrink-0">
          <div className="flex items-center gap-2">
            <div className={clsx("w-1.5 h-1.5 rounded-full", status === AppStatus.PLAYING ? "bg-emerald-500 animate-pulse" : "bg-gray-700")} />
            {status} MODE

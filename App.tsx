@@ -150,7 +150,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen font-sans text-gray-300 selection:bg-emerald-500/30 selection:text-emerald-100 relative overflow-hidden">
+    <div className="min-h-screen font-sans text-gray-300 selection:bg-emerald-500/30 selection:text-emerald-100 relative overflow-hidden flex flex-col">
       
       {/* Animated Background Elements */}
       <div className="fixed inset-0 z-0 pointer-events-none">
@@ -159,16 +159,16 @@ const App: React.FC = () => {
          <div className="absolute bottom-10 right-10 w-96 h-96 bg-emerald-500/10 rounded-full blur-[100px] animate-blob animation-delay-2000"></div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-4 md:p-10 relative z-10">
+      <div className="w-full max-w-[1920px] mx-auto p-4 lg:p-6 2xl:p-10 relative z-10 flex flex-col h-full flex-1">
         
         {/* Header Section */}
-        <header className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-6">
+        <header className="mb-4 lg:mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-4 lg:pb-6">
           <div className="space-y-1">
-            <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight flex items-center gap-2">
-              <Layers className="text-emerald-500" />
+            <h1 className="text-2xl lg:text-3xl 2xl:text-4xl font-bold text-white tracking-tight flex items-center gap-2">
+              <Layers className="text-emerald-500 w-6 h-6 lg:w-8 lg:h-8" />
               SRT Studio
             </h1>
-            <p className="text-xs text-gray-500 font-mono uppercase tracking-widest pl-1">
+            <p className="text-[10px] lg:text-xs text-gray-500 font-mono uppercase tracking-widest pl-1">
               AI-Powered Subtitle Synchronization
             </p>
           </div>
@@ -181,10 +181,10 @@ const App: React.FC = () => {
         </header>
 
         {/* Main Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 2xl:gap-10 flex-1">
           
           {/* Left Column: Input & Controls (5 columns) */}
-          <div className="lg:col-span-5 space-y-6">
+          <div className="lg:col-span-5 flex flex-col gap-4 lg:gap-6">
             
             <VoiceControls 
               selectedVoice={selectedVoice}
@@ -196,8 +196,8 @@ const App: React.FC = () => {
             />
 
             {/* Input Card */}
-            <div className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-1 flex flex-col shadow-2xl">
-               <div className="flex items-center justify-between px-5 py-3 border-b border-white/5 bg-gray-950/30 rounded-t-xl">
+            <div className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-1 flex flex-col shadow-2xl flex-1 min-h-0">
+               <div className="flex items-center justify-between px-4 py-2 lg:px-5 lg:py-3 border-b border-white/5 bg-gray-950/30 rounded-t-xl shrink-0">
                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 flex items-center gap-2">
                    <FileText size={12} /> Source Script
                  </label>
@@ -219,7 +219,7 @@ const App: React.FC = () => {
                  </button>
                </div>
                
-               <div className="p-2">
+               <div className="p-2 h-full flex flex-col">
                  <textarea
                    value={inputText}
                    onChange={(e) => {
@@ -230,17 +230,18 @@ const App: React.FC = () => {
                      }
                    }}
                    placeholder="Enter your script here. For best results with 'Auto-Split', use proper punctuation."
-                   className="w-full h-80 bg-gray-950/40 rounded-xl p-4 text-gray-300 focus:bg-gray-950/80 outline-none resize-none transition-all placeholder:text-gray-700 font-mono text-sm leading-relaxed border border-transparent focus:border-white/10"
+                   // Dynamic height: 35vh for laptops, scaling up. Minimum 250px.
+                   className="w-full h-[35vh] min-h-[250px] bg-gray-950/40 rounded-xl p-4 text-gray-300 focus:bg-gray-950/80 outline-none resize-none transition-all placeholder:text-gray-700 font-mono text-sm leading-relaxed border border-transparent focus:border-white/10"
                  />
                </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-1">
+            <div className="grid grid-cols-1 shrink-0">
                {status === AppStatus.PLAYING ? (
                  <button
                    onClick={stopPlayback}
-                   className="group relative overflow-hidden bg-red-500/10 hover:bg-red-500/20 border border-red-500/50 py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(239,68,68,0.2)]"
+                   className="group relative overflow-hidden bg-red-500/10 hover:bg-red-500/20 border border-red-500/50 py-3 lg:py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(239,68,68,0.2)]"
                  >
                    <div className="flex items-center justify-center gap-3 text-red-500 font-bold tracking-widest text-sm">
                      <Square size={18} fill="currentColor" /> STOP RECORDING
@@ -251,7 +252,7 @@ const App: React.FC = () => {
                    onClick={chunks.length > 0 ? startRecording : handleOptimization}
                    disabled={!inputText.trim() || status === AppStatus.OPTIMIZING}
                    className={clsx(
-                     "relative overflow-hidden py-4 rounded-xl font-bold tracking-widest text-sm transition-all flex items-center justify-center gap-3 shadow-lg group",
+                     "relative overflow-hidden py-3 lg:py-4 rounded-xl font-bold tracking-widest text-sm transition-all flex items-center justify-center gap-3 shadow-lg group",
                      (!inputText.trim() || status === AppStatus.OPTIMIZING) 
                        ? "bg-gray-800 text-gray-600 cursor-not-allowed border border-white/5" 
                        : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-900/30 hover:shadow-emerald-900/50 hover:-translate-y-0.5 border border-emerald-400/20"

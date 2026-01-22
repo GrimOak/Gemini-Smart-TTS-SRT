@@ -84,11 +84,11 @@ const VoiceControls: React.FC<VoiceControlsProps> = ({
   };
 
   return (
-    <div className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl relative overflow-hidden group">
+    <div className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl relative overflow-hidden group">
       {/* Decorative gradient glow */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -z-10 transition-opacity opacity-30 group-hover:opacity-60 pointer-events-none"></div>
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg border border-white/5 shadow-inner">
             <Settings2 size={18} className="text-emerald-400" />
@@ -97,7 +97,7 @@ const VoiceControls: React.FC<VoiceControlsProps> = ({
         </div>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4 lg:space-y-5">
         {/* Voice Selector */}
         <div className="space-y-2">
           <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 flex items-center gap-2">
@@ -135,9 +135,9 @@ const VoiceControls: React.FC<VoiceControlsProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-6 pt-2">
+        <div className="grid grid-cols-2 gap-6 pt-1">
           {/* Speed Control */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             <div className="flex justify-between items-center">
               <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 flex items-center gap-2">
                 <Zap size={12} /> Speed
@@ -159,7 +159,7 @@ const VoiceControls: React.FC<VoiceControlsProps> = ({
           </div>
 
           {/* Pitch Control */}
-          <div className="space-y-3">
+          <div className="space-y-2">
              <div className="flex justify-between items-center">
               <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 flex items-center gap-2">
                 <Music size={12} /> Pitch
