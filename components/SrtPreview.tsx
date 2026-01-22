@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { SubtitleChunk, AppStatus } from '../types';
 import { formatTime } from '../utils/srtHelper';
-import { Download, LayoutPanelTop, Play, CheckCircle2 } from 'lucide-react';
+import { Download, Monitor, Activity, Radio } from 'lucide-react';
 import clsx from 'clsx';
 
 interface SrtPreviewProps {
@@ -14,6 +14,7 @@ interface SrtPreviewProps {
 const SrtPreview: React.FC<SrtPreviewProps> = ({ chunks, activeChunkId, status, onDownload }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Auto-scroll to active chunk
   useEffect(() => {
     if (activeChunkId !== null && scrollRef.current) {
       const activeEl = scrollRef.current.querySelector(`[data-id="${activeChunkId}"]`);
@@ -24,99 +25,101 @@ const SrtPreview: React.FC<SrtPreviewProps> = ({ chunks, activeChunkId, status, 
   }, [activeChunkId]);
 
   return (
-    <div className="glass rounded-2xl flex flex-col h-full overflow-hidden border border-white/5">
-      <div className="p-5 border-b border-white/5 flex justify-between items-center bg-white/5">
-        <h3 className="text-xs font-bold uppercase tracking-widest text-cyan-400 flex items-center gap-2">
-          <LayoutPanelTop size={14} /> Subtitle Timeline
-        </h3>
-        <button
-          onClick={onDownload}
-          disabled={chunks.length === 0}
-          className="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20 border border-emerald-400/20 rounded-full transition-all disabled:opacity-30 disabled:cursor-not-allowed group"
-        >
-          <Download size={14} className="group-hover:-translate-y-0.5 transition-transform" />
-          Export SRT
-        </button>
+    <div className="flex flex-col h-[600px] bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl overflow-hidden relative">
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-white/5 flex justify-between items-center bg-gray-900/50">
+        <div className="flex items-center gap-3">
+          <Monitor className={clsx("transition-colors duration-500", status === AppStatus.PLAYING ? "text-red-500" : "text-gray-400")} size={18} />
+          <h3 className="font-semibold text-gray-200 text-sm tracking-wide">TIMELINE MONITOR</h3>
+        </div>
+        
+        <div className="flex items-center gap-4">
+           {status === AppStatus.PLAYING && (
+              <div className="flex items-center gap-2 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-xs font-mono uppercase tracking-wider animate-pulse">
+                <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                Recording
+              </div>
+           )}
+           <button
+             onClick={onDownload}
+             disabled={chunks.length === 0}
+             className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 bg-emerald-500/5 hover:bg-emerald-500/10 border border-emerald-500/20 hover:border-emerald-500/40 rounded transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+           >
+             <Download size={14} />
+             Export .SRT
+           </button>
+        </div>
       </div>
 
+      {/* Content Area */}
       <div 
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-4 space-y-2 relative"
       >
         {chunks.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-gray-600 space-y-4 px-8 text-center">
-            <div className="w-12 h-12 rounded-full border border-white/5 flex items-center justify-center">
-              <Play size={20} className="text-gray-700 ml-1" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-600 space-y-4">
+            <div className="w-20 h-20 rounded-full bg-gray-800/50 border border-white/5 flex items-center justify-center">
+              <Activity size={32} className="opacity-20" />
             </div>
-            <p className="text-xs font-medium uppercase tracking-tight">Timeline is empty. Input text to begin.</p>
+            <p className="text-sm font-medium">Ready to initialize timeline...</p>
           </div>
         ) : (
-          chunks.map((chunk, index) => {
-            const isActive = chunk.id === activeChunkId;
-            const isCompleted = chunk.endTime !== undefined;
-
-            return (
-              <div
-                key={chunk.id}
-                data-id={chunk.id}
-                className={clsx(
-                  "group flex gap-4 p-4 rounded-xl border transition-all duration-500",
-                  isActive 
-                    ? "bg-emerald-500/10 border-emerald-500/40 shadow-[0_0_30px_rgba(16,185,129,0.05)] scale-[1.01]" 
-                    : isCompleted 
-                      ? "bg-white/5 border-white/5" 
-                      : "bg-transparent border-transparent opacity-50"
-                )}
-              >
-                {/* Index & Status Icon */}
-                <div className="flex flex-col items-center gap-2 mt-1">
-                  <span className={clsx(
-                    "text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-md border",
-                    isActive ? "bg-emerald-500 border-emerald-400 text-obsidian" : "bg-white/5 border-white/5 text-gray-600"
-                  )}>
-                    {index + 1}
-                  </span>
-                  {isCompleted && !isActive && (
-                    <CheckCircle2 size={12} className="text-emerald-500/50" />
+          <div className="pb-10">
+            {chunks.map((chunk, index) => {
+              const isActive = chunk.id === activeChunkId;
+              
+              return (
+                <div
+                  key={chunk.id}
+                  data-id={chunk.id}
+                  className={clsx(
+                    "relative group flex gap-4 p-3 rounded-lg transition-all duration-300 border-l-[3px]",
+                    isActive 
+                      ? "bg-emerald-500/10 border-emerald-500 shadow-[inset_0_0_20px_rgba(16,185,129,0.05)]" 
+                      : "bg-transparent border-transparent hover:bg-white/5"
                   )}
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-4 mb-2">
-                     <div className="flex items-center gap-2 font-mono text-[10px] tracking-wider">
-                       <span className={isActive ? "text-emerald-400 font-bold" : "text-gray-500"}>
-                         {chunk.startTime !== undefined ? formatTime(chunk.startTime) : '00:00:00,000'}
-                       </span>
-                       <span className="text-gray-700">→</span>
-                       <span className={isActive ? "text-cyan-400 font-bold" : "text-gray-500"}>
-                         {chunk.endTime !== undefined ? formatTime(chunk.endTime) : (isActive ? 'REC...' : '00:00:00,000')}
-                       </span>
-                     </div>
+                >
+                  {/* Time Column */}
+                  <div className="flex flex-col gap-1 min-w-[100px] text-[10px] font-mono opacity-70 pt-1">
+                    <span className={clsx(isActive ? "text-emerald-400 font-bold" : "text-gray-500")}>
+                      {chunk.startTime !== undefined ? formatTime(chunk.startTime).split(',')[0] : '--:--:--'}
+                    </span>
+                    <span className="text-gray-700 mx-auto">↓</span>
+                     <span className={clsx(isActive ? "text-emerald-400 font-bold" : "text-gray-500")}>
+                      {chunk.endTime !== undefined ? formatTime(chunk.endTime).split(',')[0] : '--:--:--'}
+                    </span>
                   </div>
-                  <p className={clsx(
-                    "text-sm leading-relaxed transition-colors duration-500",
-                    isActive ? "text-white font-medium" : isCompleted ? "text-gray-400" : "text-gray-600"
-                  )}>
-                    {chunk.text}
-                  </p>
+
+                  {/* Text Column */}
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">Line {index + 1}</span>
+                      {isActive && <Radio size={12} className="text-emerald-500 animate-pulse" />}
+                    </div>
+                    <p className={clsx(
+                      "text-sm leading-relaxed transition-colors",
+                      isActive ? "text-emerald-50 font-medium" : "text-gray-400 group-hover:text-gray-300"
+                    )}>
+                      {chunk.text}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            );
-          })
+              );
+            })}
+          </div>
         )}
       </div>
       
-      <div className="px-6 py-3 bg-black/40 border-t border-white/5 flex items-center justify-between">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
-          Status: {status}
-        </span>
-        {status === AppStatus.PLAYING && (
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-red-500">Recording</span>
-          </div>
-        )}
+      {/* Footer Status */}
+      <div className="px-4 py-2 bg-gray-950/80 border-t border-white/5 backdrop-blur text-center">
+        <p className="text-[10px] text-gray-500 font-mono flex justify-center gap-4">
+           <span>Total Lines: <strong className="text-gray-300">{chunks.length}</strong></span>
+           <span>•</span>
+           <span>Status: <strong className={clsx(
+             status === AppStatus.PLAYING ? "text-emerald-400" : 
+             status === AppStatus.OPTIMIZING ? "text-cyan-400" : "text-gray-300"
+           )}>{status}</strong></span>
+        </p>
       </div>
     </div>
   );

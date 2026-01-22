@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Sparkles, Play, Square, RefreshCw, AlertCircle, FileText, Cpu, ChevronRight } from 'lucide-react';
+import { Sparkles, Play, Square, RefreshCw, AlertCircle, FileText, Wand2 } from 'lucide-react';
 import clsx from 'clsx';
 import { SubtitleChunk, AppStatus } from './types';
 import { optimizeTextForSubtitles } from './services/geminiService';
@@ -13,30 +13,43 @@ const App: React.FC = () => {
   const [chunks, setChunks] = useState<SubtitleChunk[]>([]);
   const [activeChunkId, setActiveChunkId] = useState<number | null>(null);
   
+  // Voice Settings
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
   const [rate, setRate] = useState(1);
   const [pitch, setPitch] = useState(1);
 
+  // Refs for TTS logic
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const startTimeRef = useRef<number>(0);
   const chunksRef = useRef<SubtitleChunk[]>([]);
-  const recordingStartTimeRef = useRef<number>(0);
 
+  // Sync state to ref
   useEffect(() => {
     chunksRef.current = chunks;
   }, [chunks]);
 
   const handleOptimization = async () => {
     if (!inputText.trim()) return;
+    
     setStatus(AppStatus.OPTIMIZING);
     try {
       const optimizedLines = await optimizeTextForSubtitles(inputText);
+      
+      // Convert lines to chunks with character offsets
       let charCounter = 0;
       const newChunks: SubtitleChunk[] = optimizedLines.map((line, index) => {
         const start = charCounter;
         const end = start + line.length;
-        charCounter = end + 1; // +1 for the space separator in the final joined string
-        return { id: index, text: line, startCharIndex: start, endCharIndex: end };
+        charCounter = end + 1; // +1 assumes we join with a space
+        
+        return {
+          id: index,
+          text: line,
+          startCharIndex: start,
+          endCharIndex: end,
+        };
       });
+
       setChunks(newChunks);
       setStatus(AppStatus.READY);
     } catch (err) {
@@ -53,19 +66,23 @@ const App: React.FC = () => {
 
   const startRecording = () => {
     if (chunks.length === 0 || !selectedVoice) return;
+
+    // Reset timings
     const resetChunks = chunks.map(c => ({ ...c, startTime: undefined, endTime: undefined }));
     setChunks(resetChunks);
     chunksRef.current = resetChunks;
 
     const fullText = resetChunks.map(c => c.text).join(' ');
+
     const u = new SpeechSynthesisUtterance(fullText);
     u.voice = selectedVoice;
     u.rate = rate;
     u.pitch = pitch;
 
     u.onstart = () => {
-      recordingStartTimeRef.current = performance.now();
+      startTimeRef.current = performance.now();
       setStatus(AppStatus.PLAYING);
+      
       setChunks(prev => {
         const next = [...prev];
         if (next[0]) next[0].startTime = 0;
@@ -75,14 +92,12 @@ const App: React.FC = () => {
     };
 
     u.onboundary = (event) => {
-      // Use high-res timer relative to start
-      const currentTimeMs = performance.now() - recordingStartTimeRef.current;
+      const currentTimeMs = event.elapsedTime * 1000;
       const charIndex = event.charIndex;
+
       const currentChunks = chunksRef.current;
-      
-      // Find the current active chunk based on spoken character index
       const matchingChunkIndex = currentChunks.findIndex(
-        c => charIndex >= c.startCharIndex && charIndex < (c.endCharIndex + 1)
+        c => charIndex >= c.startCharIndex && charIndex < c.endCharIndex
       );
 
       if (matchingChunkIndex !== -1) {
@@ -90,11 +105,9 @@ const App: React.FC = () => {
           if (prevActiveId !== matchingChunkIndex) {
             setChunks(prev => {
               const next = [...prev];
-              // Close the previous chunk timing
               if (prevActiveId !== null && next[prevActiveId]) {
                  next[prevActiveId].endTime = currentTimeMs;
               }
-              // Set the start time for the current chunk
               if (next[matchingChunkIndex]) {
                 next[matchingChunkIndex].startTime = currentTimeMs;
               }
@@ -107,8 +120,8 @@ const App: React.FC = () => {
       }
     };
 
-    u.onend = () => {
-      const finalTimeMs = performance.now() - recordingStartTimeRef.current;
+    u.onend = (event) => {
+      const finalTimeMs = event.elapsedTime * 1000;
        setChunks(prev => {
         const next = [...prev];
         const lastIndex = next.length - 1;
@@ -131,132 +144,157 @@ const App: React.FC = () => {
     window.speechSynthesis.speak(u);
   };
 
+  const handleDownload = () => {
+    const generate = generateSrtContent(chunks);
+    downloadSrt(generate, 'gemini-tts-subs.srt');
+  };
+
   return (
-    <div className="h-screen flex flex-col">
-      {/* Top Header */}
-      <header className="h-16 px-8 border-b border-white/5 flex items-center justify-between bg-black/20 backdrop-blur-md sticky top-0 z-50">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.4)]">
-            <Cpu className="text-obsidian" size={18} />
-          </div>
-          <div>
-            <h1 className="text-sm font-black uppercase tracking-[0.2em] text-white">Gemini TTS Studio</h1>
-            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">SRT Precision Engine</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Engine Status:</span>
-            <div className={clsx(
-              "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border transition-colors",
-              status === AppStatus.PLAYING ? "bg-red-500/10 border-red-500/20 text-red-500" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
-            )}>
-              {status}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Workspace */}
-      <main className="flex-1 overflow-hidden flex p-6 gap-6">
+    <div className="min-h-screen font-sans text-gray-300 selection:bg-emerald-500/30 selection:text-emerald-100">
+      <div className="max-w-7xl mx-auto p-6 md:p-10">
         
-        {/* Left Side: Editor & Controls */}
-        <div className="w-1/2 flex flex-col gap-6">
-          {/* Settings Section */}
-          <VoiceControls 
-            selectedVoice={selectedVoice}
-            onVoiceChange={setSelectedVoice}
-            rate={rate}
-            onRateChange={setRate}
-            pitch={pitch}
-            onPitchChange={setPitch}
-          />
+        {/* Header Section */}
+        <header className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="space-y-1">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent tracking-tight">
+              SRT Studio AI
+            </h1>
+            <p className="text-sm text-gray-500 font-medium tracking-wide uppercase">
+              Intelligent Text-to-Speech & Subtitle Timing
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-mono text-gray-600 bg-gray-900/50 border border-white/5 px-3 py-1.5 rounded-full">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+            SYSTEM ONLINE
+          </div>
+        </header>
 
-          {/* Editor Section */}
-          <div className="flex-1 flex flex-col glass rounded-2xl overflow-hidden border border-white/5 relative">
-            <div className="p-4 border-b border-white/5 flex justify-between items-center bg-white/5">
-               <div className="flex items-center gap-2">
-                 <FileText size={14} className="text-emerald-500" />
-                 <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Source Manuscript</span>
-               </div>
-               
-               <button 
-                  onClick={handleOptimization}
-                  disabled={!inputText.trim() || status === AppStatus.PLAYING || status === AppStatus.OPTIMIZING}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-emerald-400 hover:bg-emerald-400/10 transition-all disabled:opacity-20 group"
-               >
-                 <Sparkles size={12} className={clsx(status === AppStatus.OPTIMIZING && "animate-spin")} />
-                 {status === AppStatus.OPTIMIZING ? "Analyzing..." : "AI Segment"}
-               </button>
-            </div>
-
-            <textarea
-               value={inputText}
-               onChange={(e) => {
-                 setInputText(e.target.value);
-                 if (chunks.length > 0) {
-                   setChunks([]);
-                   setStatus(AppStatus.IDLE);
-                 }
-               }}
-               placeholder="Paste your text manuscript here..."
-               className="flex-1 w-full bg-transparent p-6 text-gray-300 focus:outline-none resize-none font-mono text-sm leading-relaxed placeholder:text-gray-700"
+        {/* Main Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          {/* Left Column: Input & Controls (5 columns) */}
+          <div className="lg:col-span-5 space-y-6">
+            
+            <VoiceControls 
+              selectedVoice={selectedVoice}
+              onVoiceChange={setSelectedVoice}
+              rate={rate}
+              onRateChange={setRate}
+              pitch={pitch}
+              onPitchChange={setPitch}
             />
 
-            {/* Floating Action Center */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-4/5 flex gap-3">
+            {/* Input Card */}
+            <div className="bg-gray-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-1 flex flex-col shadow-xl">
+               <div className="flex items-center justify-between px-5 py-3 border-b border-white/5">
+                 <label className="text-xs font-medium uppercase tracking-wider text-gray-400 flex items-center gap-2">
+                   <FileText size={14} /> Source Script
+                 </label>
+                 <button 
+                  onClick={handleOptimization}
+                  disabled={!inputText.trim() || status === AppStatus.PLAYING || status === AppStatus.OPTIMIZING}
+                  className={clsx(
+                    "text-xs flex items-center gap-1.5 px-3 py-1 rounded-full transition-all border",
+                    status === AppStatus.OPTIMIZING 
+                      ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 cursor-wait" 
+                      : "bg-gray-800 hover:bg-emerald-500/20 border-white/10 hover:border-emerald-500/30 text-gray-300 hover:text-emerald-300 disabled:opacity-50"
+                  )}
+                 >
+                   {status === AppStatus.OPTIMIZING ? (
+                      <><RefreshCw size={12} className="animate-spin" /> Processing...</>
+                   ) : (
+                      <><Wand2 size={12} /> Auto-Split Sentences</>
+                   )}
+                 </button>
+               </div>
+               
+               <div className="p-1">
+                 <textarea
+                   value={inputText}
+                   onChange={(e) => {
+                     setInputText(e.target.value);
+                     if (chunks.length > 0) {
+                       setChunks([]); 
+                       setStatus(AppStatus.IDLE);
+                     }
+                   }}
+                   placeholder="Enter your script here. For best results with 'Auto-Split', use proper punctuation."
+                   className="w-full h-80 bg-gray-950/30 rounded-xl p-4 text-gray-300 focus:bg-gray-950/50 outline-none resize-none transition-all placeholder:text-gray-700 font-mono text-sm leading-relaxed border border-transparent focus:border-white/5"
+                 />
+               </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-1">
                {status === AppStatus.PLAYING ? (
                  <button
                    onClick={stopPlayback}
-                   className="w-full bg-red-600 hover:bg-red-500 text-white py-3 rounded-xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-2xl transition-all active:scale-95"
+                   className="group relative overflow-hidden bg-red-500/10 hover:bg-red-500/20 border border-red-500/50 py-4 rounded-xl transition-all"
                  >
-                   <Square size={14} fill="currentColor" /> Stop Engine
+                   <div className="flex items-center justify-center gap-3 text-red-500 font-bold tracking-wide">
+                     <Square size={20} fill="currentColor" /> STOP RECORDING
+                   </div>
                  </button>
                ) : (
                  <button
-                   onClick={startRecording}
+                   onClick={chunks.length > 0 ? startRecording : handleOptimization}
                    disabled={!inputText.trim() || status === AppStatus.OPTIMIZING}
                    className={clsx(
-                     "w-full py-3 rounded-xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 shadow-2xl transition-all active:scale-95",
-                     (chunks.length > 0) 
-                       ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/40" 
-                       : "bg-white/5 border border-white/10 text-gray-500 cursor-not-allowed"
+                     "relative overflow-hidden py-4 rounded-xl font-bold tracking-wide transition-all flex items-center justify-center gap-3 shadow-lg group",
+                     (!inputText.trim() || status === AppStatus.OPTIMIZING) 
+                       ? "bg-gray-800 text-gray-600 cursor-not-allowed border border-white/5" 
+                       : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-900/20 hover:shadow-emerald-900/40 hover:-translate-y-0.5"
                    )}
                  >
-                   {chunks.length > 0 ? (
-                      <><Play size={14} fill="currentColor" /> Run Recording</>
+                   {/* Button glow effect */}
+                   <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 blur-xl"></div>
+                   
+                   {status === AppStatus.OPTIMIZING ? (
+                      <><RefreshCw size={20} className="animate-spin relative z-10" /> <span className="relative z-10">OPTIMIZING...</span></>
+                   ) : chunks.length > 0 ? (
+                      <><Play size={20} fill="currentColor" className="relative z-10" /> <span className="relative z-10">START RECORDING</span></>
                    ) : (
-                      <><RefreshCw size={14} /> Ready for Segmentation</>
+                      <><Sparkles size={20} className="relative z-10" /> <span className="relative z-10">PREPARE SCRIPT</span></>
                    )}
                  </button>
                )}
+               
+               {chunks.length === 0 && inputText.trim().length > 0 && (
+                 <div className="mt-4 flex items-center justify-center gap-2 text-xs text-amber-500/70">
+                   <AlertCircle size={12} />
+                   <span>Don't forget to split your sentences before recording!</span>
+                 </div>
+               )}
             </div>
           </div>
-        </div>
 
-        {/* Right Side: Timeline */}
-        <div className="w-1/2">
-          <SrtPreview 
-            chunks={chunks} 
-            activeChunkId={activeChunkId}
-            status={status}
-            onDownload={() => {
-              const content = generateSrtContent(chunks);
-              downloadSrt(content, 'studio-export.srt');
-            }}
-          />
-        </div>
-      </main>
+          {/* Right Column: Preview (7 columns) */}
+          <div className="lg:col-span-7 flex flex-col h-full">
+            <SrtPreview 
+              chunks={chunks} 
+              activeChunkId={activeChunkId}
+              status={status}
+              onDownload={handleDownload}
+            />
+            
+            {/* Instruction Footer */}
+            <div className="mt-6 grid grid-cols-3 gap-4">
+              {[
+                { step: "01", title: "Write & Split", desc: "Paste text and use AI to split into perfect subtitle lines." },
+                { step: "02", title: "Select Voice", desc: "Choose a Microsoft Edge natural voice for best quality." },
+                { step: "03", title: "Record & Export", desc: "The app reads the text and auto-generates timestamped SRTs." },
+              ].map((item) => (
+                <div key={item.step} className="bg-gray-900/30 border border-white/5 rounded-lg p-4 backdrop-blur-sm">
+                  <div className="text-xs font-bold text-emerald-500/50 mb-1">{item.step}</div>
+                  <div className="text-sm font-semibold text-gray-300 mb-1">{item.title}</div>
+                  <div className="text-[10px] text-gray-500 leading-tight">{item.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-      {/* Footer Info */}
-      <footer className="h-10 px-8 flex items-center justify-between border-t border-white/5 text-[9px] font-bold text-gray-600 uppercase tracking-[0.2em] bg-obsidian">
-        <span>© 2025 GEMINI STUDIO V3</span>
-        <div className="flex gap-4">
-          <span className="text-emerald-500/50">PRO MODE ACTIVE</span>
-          <span className="text-cyan-500/50">STRICT SRT COMPLIANCE</span>
         </div>
-      </footer>
+      </div>
     </div>
   );
 };
