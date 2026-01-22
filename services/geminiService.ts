@@ -6,26 +6,13 @@ const ai = new GoogleGenAI({ apiKey });
 
 /**
  * Uses Gemini to split long text into natural subtitle chunks.
- * Updated to ensure each sentence is its own line and newlines/paragraphs are respected.
+ * Updated to ensure each sentence is its own line as requested.
  */
 export const optimizeTextForSubtitles = async (text: string): Promise<string[]> => {
-  // Helper for fallback splitting
-  const fallbackSplit = (inputText: string): string[] => {
-    // 1. Split by newlines first to respect paragraphs
-    const paragraphs = inputText.split(/\r?\n/).filter(p => p.trim().length > 0);
-    const results: string[] = [];
-    
-    for (const p of paragraphs) {
-      // 2. Split each paragraph into sentences
-      const sentences = p.match(/[^\.!\?]+[\.!\?]+["']?|.+$/g)?.map(s => s.trim()) || [p.trim()];
-      results.push(...sentences);
-    }
-    return results;
-  };
-
   if (!apiKey) {
     console.warn("No API Key found. Returning simple split.");
-    return fallbackSplit(text);
+    // Fallback if no API key: Simple sentence splitting
+    return text.match(/[^\.!\?]+[\.!\?]+["']?|.+$/g)?.map(s => s.trim()) || [text];
   }
 
   try {
@@ -37,8 +24,7 @@ export const optimizeTextForSubtitles = async (text: string): Promise<string[]> 
       2. Do not split a single sentence into multiple parts, even if it is long.
       3. Do not combine multiple sentences into one item.
       4. Preserve all original punctuation and wording exactly.
-      5. Treat newlines (paragraphs) in the source text as hard breaks. Do not merge text from different paragraphs.
-      6. Return a JSON array of strings.
+      5. Return a JSON array of strings.
       
       Text to split:
       "${text}"`,
@@ -60,10 +46,11 @@ export const optimizeTextForSubtitles = async (text: string): Promise<string[]> 
     if (Array.isArray(parsed)) {
       return parsed;
     }
-    return fallbackSplit(text);
+    return [text];
 
   } catch (error) {
     console.error("Gemini optimization failed:", error);
-    return fallbackSplit(text);
+    // Fallback to basic sentence splitting if API fails
+    return text.match(/[^\.!\?]+[\.!\?]+["']?|.+$/g)?.map(s => s.trim()) || [text];
   }
 };

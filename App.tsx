@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Sparkles, Play, Square, RefreshCw, AlertCircle, FileText, Wand2 } from 'lucide-react';
+import { Sparkles, Play, Square, RefreshCw, AlertCircle, FileText, Wand2, Layers } from 'lucide-react';
 import clsx from 'clsx';
 import { SubtitleChunk, AppStatus } from './types';
 import { optimizeTextForSubtitles } from './services/geminiService';
@@ -150,22 +150,33 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen font-sans text-gray-300 selection:bg-emerald-500/30 selection:text-emerald-100">
-      <div className="max-w-7xl mx-auto p-6 md:p-10">
+    <div className="min-h-screen font-sans text-gray-300 selection:bg-emerald-500/30 selection:text-emerald-100 relative overflow-hidden">
+      
+      {/* Animated Background Elements */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+         <div className="absolute top-0 left-0 w-full h-full bg-grid-pattern opacity-[0.15]"></div>
+         <div className="absolute top-10 left-10 w-96 h-96 bg-purple-500/20 rounded-full blur-[100px] animate-blob"></div>
+         <div className="absolute bottom-10 right-10 w-96 h-96 bg-emerald-500/10 rounded-full blur-[100px] animate-blob animation-delay-2000"></div>
+      </div>
+
+      <div className="max-w-7xl mx-auto p-4 md:p-10 relative z-10">
         
         {/* Header Section */}
-        <header className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <header className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-6">
           <div className="space-y-1">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent tracking-tight">
-              SRT Studio AI
+            <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight flex items-center gap-2">
+              <Layers className="text-emerald-500" />
+              SRT Studio
             </h1>
-            <p className="text-sm text-gray-500 font-medium tracking-wide uppercase">
-              Intelligent Text-to-Speech & Subtitle Timing
+            <p className="text-xs text-gray-500 font-mono uppercase tracking-widest pl-1">
+              AI-Powered Subtitle Synchronization
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs font-mono text-gray-600 bg-gray-900/50 border border-white/5 px-3 py-1.5 rounded-full">
-            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-            SYSTEM ONLINE
+          <div className="flex items-center gap-3">
+             <div className="flex items-center gap-2 text-[10px] font-bold font-mono text-emerald-400 bg-emerald-950/40 border border-emerald-500/20 px-3 py-1.5 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+               <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
+               SYSTEM ACTIVE
+             </div>
           </div>
         </header>
 
@@ -185,30 +196,30 @@ const App: React.FC = () => {
             />
 
             {/* Input Card */}
-            <div className="bg-gray-900/40 backdrop-blur-md border border-white/10 rounded-2xl p-1 flex flex-col shadow-xl">
-               <div className="flex items-center justify-between px-5 py-3 border-b border-white/5">
-                 <label className="text-xs font-medium uppercase tracking-wider text-gray-400 flex items-center gap-2">
-                   <FileText size={14} /> Source Script
+            <div className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-1 flex flex-col shadow-2xl">
+               <div className="flex items-center justify-between px-5 py-3 border-b border-white/5 bg-gray-950/30 rounded-t-xl">
+                 <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 flex items-center gap-2">
+                   <FileText size={12} /> Source Script
                  </label>
                  <button 
                   onClick={handleOptimization}
                   disabled={!inputText.trim() || status === AppStatus.PLAYING || status === AppStatus.OPTIMIZING}
                   className={clsx(
-                    "text-xs flex items-center gap-1.5 px-3 py-1 rounded-full transition-all border",
+                    "text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all border shadow-sm",
                     status === AppStatus.OPTIMIZING 
                       ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 cursor-wait" 
-                      : "bg-gray-800 hover:bg-emerald-500/20 border-white/10 hover:border-emerald-500/30 text-gray-300 hover:text-emerald-300 disabled:opacity-50"
+                      : "bg-gray-800 hover:bg-emerald-500/10 border-gray-700 hover:border-emerald-500/30 text-gray-400 hover:text-emerald-300 disabled:opacity-50"
                   )}
                  >
                    {status === AppStatus.OPTIMIZING ? (
                       <><RefreshCw size={12} className="animate-spin" /> Processing...</>
                    ) : (
-                      <><Wand2 size={12} /> Auto-Split Sentences</>
+                      <><Wand2 size={12} /> Auto-Split</>
                    )}
                  </button>
                </div>
                
-               <div className="p-1">
+               <div className="p-2">
                  <textarea
                    value={inputText}
                    onChange={(e) => {
@@ -219,7 +230,7 @@ const App: React.FC = () => {
                      }
                    }}
                    placeholder="Enter your script here. For best results with 'Auto-Split', use proper punctuation."
-                   className="w-full h-80 bg-gray-950/30 rounded-xl p-4 text-gray-300 focus:bg-gray-950/50 outline-none resize-none transition-all placeholder:text-gray-700 font-mono text-sm leading-relaxed border border-transparent focus:border-white/5"
+                   className="w-full h-80 bg-gray-950/40 rounded-xl p-4 text-gray-300 focus:bg-gray-950/80 outline-none resize-none transition-all placeholder:text-gray-700 font-mono text-sm leading-relaxed border border-transparent focus:border-white/10"
                  />
                </div>
             </div>
@@ -229,10 +240,10 @@ const App: React.FC = () => {
                {status === AppStatus.PLAYING ? (
                  <button
                    onClick={stopPlayback}
-                   className="group relative overflow-hidden bg-red-500/10 hover:bg-red-500/20 border border-red-500/50 py-4 rounded-xl transition-all"
+                   className="group relative overflow-hidden bg-red-500/10 hover:bg-red-500/20 border border-red-500/50 py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(239,68,68,0.2)]"
                  >
-                   <div className="flex items-center justify-center gap-3 text-red-500 font-bold tracking-wide">
-                     <Square size={20} fill="currentColor" /> STOP RECORDING
+                   <div className="flex items-center justify-center gap-3 text-red-500 font-bold tracking-widest text-sm">
+                     <Square size={18} fill="currentColor" /> STOP RECORDING
                    </div>
                  </button>
                ) : (
@@ -240,30 +251,23 @@ const App: React.FC = () => {
                    onClick={chunks.length > 0 ? startRecording : handleOptimization}
                    disabled={!inputText.trim() || status === AppStatus.OPTIMIZING}
                    className={clsx(
-                     "relative overflow-hidden py-4 rounded-xl font-bold tracking-wide transition-all flex items-center justify-center gap-3 shadow-lg group",
+                     "relative overflow-hidden py-4 rounded-xl font-bold tracking-widest text-sm transition-all flex items-center justify-center gap-3 shadow-lg group",
                      (!inputText.trim() || status === AppStatus.OPTIMIZING) 
                        ? "bg-gray-800 text-gray-600 cursor-not-allowed border border-white/5" 
-                       : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-900/20 hover:shadow-emerald-900/40 hover:-translate-y-0.5"
+                       : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-900/30 hover:shadow-emerald-900/50 hover:-translate-y-0.5 border border-emerald-400/20"
                    )}
                  >
                    {/* Button glow effect */}
-                   <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 blur-xl"></div>
+                   <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 blur-xl"></div>
                    
                    {status === AppStatus.OPTIMIZING ? (
-                      <><RefreshCw size={20} className="animate-spin relative z-10" /> <span className="relative z-10">OPTIMIZING...</span></>
+                      <><RefreshCw size={18} className="animate-spin relative z-10" /> <span className="relative z-10">OPTIMIZING...</span></>
                    ) : chunks.length > 0 ? (
-                      <><Play size={20} fill="currentColor" className="relative z-10" /> <span className="relative z-10">START RECORDING</span></>
+                      <><Play size={18} fill="currentColor" className="relative z-10" /> <span className="relative z-10">START RECORDING</span></>
                    ) : (
-                      <><Sparkles size={20} className="relative z-10" /> <span className="relative z-10">PREPARE SCRIPT</span></>
+                      <><Sparkles size={18} className="relative z-10" /> <span className="relative z-10">PREPARE SCRIPT</span></>
                    )}
                  </button>
-               )}
-               
-               {chunks.length === 0 && inputText.trim().length > 0 && (
-                 <div className="mt-4 flex items-center justify-center gap-2 text-xs text-amber-500/70">
-                   <AlertCircle size={12} />
-                   <span>Don't forget to split your sentences before recording!</span>
-                 </div>
                )}
             </div>
           </div>
@@ -276,21 +280,6 @@ const App: React.FC = () => {
               status={status}
               onDownload={handleDownload}
             />
-            
-            {/* Instruction Footer */}
-            <div className="mt-6 grid grid-cols-3 gap-4">
-              {[
-                { step: "01", title: "Write & Split", desc: "Paste text and use AI to split into perfect subtitle lines." },
-                { step: "02", title: "Select Voice", desc: "Choose a Microsoft Edge natural voice for best quality." },
-                { step: "03", title: "Record & Export", desc: "The app reads the text and auto-generates timestamped SRTs." },
-              ].map((item) => (
-                <div key={item.step} className="bg-gray-900/30 border border-white/5 rounded-lg p-4 backdrop-blur-sm">
-                  <div className="text-xs font-bold text-emerald-500/50 mb-1">{item.step}</div>
-                  <div className="text-sm font-semibold text-gray-300 mb-1">{item.title}</div>
-                  <div className="text-[10px] text-gray-500 leading-tight">{item.desc}</div>
-                </div>
-              ))}
-            </div>
           </div>
 
         </div>
