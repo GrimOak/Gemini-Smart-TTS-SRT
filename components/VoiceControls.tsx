@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Settings2, Mic, Activity } from 'lucide-react';
+import { Settings2, Volume2, Waves, ChevronDown } from 'lucide-react';
 import { VoiceOption } from '../types';
 
 interface VoiceControlsProps {
@@ -24,102 +24,132 @@ const VoiceControls: React.FC<VoiceControlsProps> = ({
   useEffect(() => {
     const loadVoices = () => {
       const availVoices = window.speechSynthesis.getVoices();
-      // Sort to put Microsoft/Edge voices first if available, then Google, then others
-      const sortedVoices = availVoices.sort((a, b) => {
-        const aIsEdge = a.name.includes("Microsoft");
-        const bIsEdge = b.name.includes("Microsoft");
-        if (aIsEdge && !bIsEdge) return -1;
-        if (!aIsEdge && bIsEdge) return 1;
-        return a.lang.localeCompare(b.lang);
-      });
-      setVoices(sortedVoices);
       
-      // Set default if none selected
+      // Sort voices: Online/Natural voices first, then alphabetize
+      const sortedVoices = availVoices.sort((a, b) => {
+        const aIsNatural = a.name.includes("Natural");
+        const bIsNatural = b.name.includes("Natural");
+        const aIsMicrosoft = a.name.includes("Microsoft");
+        const bIsMicrosoft = b.name.includes("Microsoft");
+
+        if (aIsNatural && !bIsNatural) return -1;
+        if (!aIsNatural && bIsNatural) return 1;
+        if (aIsMicrosoft && !bIsMicrosoft) return -1;
+        if (!aIsMicrosoft && bIsMicrosoft) return 1;
+        
+        return a.lang.localeCompare(b.lang) || a.name.localeCompare(b.name);
+      });
+
+      setVoices(sortedVoices);
+
+      // Default Voice Logic
       if (!selectedVoice && sortedVoices.length > 0) {
-        // Prefer English US Microsoft voice if available
-        const defaultVoice = sortedVoices.find(v => v.name.includes("Microsoft Guy") || v.name.includes("English (United States)")) || sortedVoices[0];
-        onVoiceChange(defaultVoice);
+        // 1. Try to find Ava
+        let defaultVoice = sortedVoices.find(v => v.name.includes("Microsoft Ava Online (Natural)"));
+        
+        // 2. Try to find any other Natural English voice
+        if (!defaultVoice) {
+          defaultVoice = sortedVoices.find(v => v.name.includes("Natural") && v.lang.startsWith("en"));
+        }
+
+        // 3. Try to find any Microsoft English voice
+        if (!defaultVoice) {
+          defaultVoice = sortedVoices.find(v => v.name.includes("Microsoft") && v.lang.startsWith("en"));
+        }
+
+        // 4. Fallback to any English voice
+        if (!defaultVoice) {
+          defaultVoice = sortedVoices.find(v => v.lang.startsWith("en"));
+        }
+
+        // 5. Ultimate fallback
+        if (!defaultVoice) {
+          defaultVoice = sortedVoices[0];
+        }
+
+        onVoiceChange(defaultVoice || null);
       }
     };
 
     loadVoices();
+    // Some browsers need this event to populate the voice list
     window.speechSynthesis.onvoiceschanged = loadVoices;
     
-    return () => {
-      window.speechSynthesis.onvoiceschanged = null;
+    return () => { 
+      window.speechSynthesis.onvoiceschanged = null; 
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedVoice, onVoiceChange]);
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-xl mb-6">
-      <div className="flex items-center gap-2 mb-4 text-emerald-400">
-        <Settings2 size={20} />
-        <h2 className="font-semibold text-lg">Voice Settings</h2>
+    <div className="glass rounded-2xl p-5 space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-bold uppercase tracking-widest text-emerald-500/80 flex items-center gap-2">
+          <Settings2 size={14} /> Voice Engine (EdgeTTS)
+        </h3>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="space-y-5">
         {/* Voice Selector */}
-        <div className="space-y-2">
-          <label className="text-sm text-gray-400 flex items-center gap-2">
-            <Mic size={14} /> Voice
+        <div className="group">
+          <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2 block group-hover:text-gray-400 transition-colors">
+            Selected Speaker
           </label>
-          <select
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-sm text-gray-200 focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all"
-            value={selectedVoice?.voiceURI || ''}
-            onChange={(e) => {
-              const voice = voices.find(v => v.voiceURI === e.target.value);
-              onVoiceChange(voice || null);
-            }}
-          >
-            {voices.map((voice) => (
-              <option key={voice.voiceURI} value={voice.voiceURI}>
-                {voice.name} ({voice.lang})
-              </option>
-            ))}
-          </select>
-          <p className="text-xs text-gray-500 mt-1">
-            * Use Microsoft Edge browser to access "Microsoft" natural voices.
-          </p>
-        </div>
-
-        {/* Speed Control */}
-        <div className="space-y-2">
-          <label className="text-sm text-gray-400 flex items-center gap-2">
-            <Activity size={14} /> Speed ({rate}x)
-          </label>
-          <input
-            type="range"
-            min="0.5"
-            max="2"
-            step="0.1"
-            value={rate}
-            onChange={(e) => onRateChange(parseFloat(e.target.value))}
-            className="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-          />
-          <div className="flex justify-between text-xs text-gray-600">
-            <span>Slow</span>
-            <span>Fast</span>
+          <div className="relative">
+            <select
+              className="w-full bg-black/40 border border-white/5 rounded-xl py-2.5 pl-3 pr-10 text-sm text-gray-200 focus:ring-1 focus:ring-emerald-500/30 focus:border-emerald-500/30 outline-none transition-all appearance-none cursor-pointer"
+              value={selectedVoice?.voiceURI || ''}
+              onChange={(e) => {
+                const voice = voices.find(v => v.voiceURI === e.target.value);
+                onVoiceChange(voice || null);
+              }}
+            >
+              {voices.map((voice) => (
+                <option key={voice.voiceURI} value={voice.voiceURI} className="bg-obsidian">
+                  {voice.name} ({voice.lang})
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
           </div>
         </div>
 
-        {/* Pitch Control */}
-        <div className="space-y-2">
-          <label className="text-sm text-gray-400 flex items-center gap-2">
-            <Activity size={14} /> Pitch ({pitch})
-          </label>
-          <input
-            type="range"
-            min="0.5"
-            max="2"
-            step="0.1"
-            value={pitch}
-            onChange={(e) => onPitchChange(parseFloat(e.target.value))}
-            className="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-          />
-           <div className="flex justify-between text-xs text-gray-600">
-            <span>Low</span>
-            <span>High</span>
+        <div className="grid grid-cols-2 gap-4">
+          {/* Rate */}
+          <div className="space-y-3">
+            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+              <Waves size={12} className="text-cyan-500" /> Speed
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min="0.5"
+                max="2"
+                step="0.1"
+                value={rate}
+                onChange={(e) => onRateChange(parseFloat(e.target.value))}
+                className="flex-1 h-1 bg-white/5 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+              />
+              <span className="text-xs font-mono text-emerald-400 w-8 text-right">{rate}x</span>
+            </div>
+          </div>
+
+          {/* Pitch */}
+          <div className="space-y-3">
+            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+              <Volume2 size={12} className="text-purple-500" /> Tone
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min="0.5"
+                max="2"
+                step="0.1"
+                value={pitch}
+                onChange={(e) => onPitchChange(parseFloat(e.target.value))}
+                className="flex-1 h-1 bg-white/5 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+              />
+              <span className="text-xs font-mono text-emerald-400 w-8 text-right">{pitch}</span>
+            </div>
           </div>
         </div>
       </div>
